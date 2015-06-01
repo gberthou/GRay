@@ -5,6 +5,8 @@
 #include "ContextWrapper.h"
 #include "utils.h"
 
+using namespace grl;
+
 ContextWrapper::ContextWrapper():
 	context(0),
 	created(false)
@@ -71,6 +73,11 @@ cl::Program *ContextWrapper::LoadProgram(const std::string &filename)
 		return program;
 	}
 	return 0;
+}
+
+cl::Buffer *ContextWrapper::CreateBuffer(cl_mem_flags flags, size_t size, void *host_ptr, cl_int *err) const
+{
+	return new cl::Buffer(*context, flags, size, host_ptr, err);
 }
 
 const cl::Context &ContextWrapper::GetContext(void) const

@@ -17,7 +17,7 @@ int main(void)
 
 	cl_int err;
 
-	ContextWrapper cwrapper;
+	grl::ContextWrapper cwrapper;
 
 	cwrapper.CreateContext();
 

@@ -7,7 +7,12 @@
 
 #include <string>
 
-class ContextWrapper
+namespace grl
+{
+	class ContextWrapper;
+}
+
+class grl::ContextWrapper
 {
 	public:
 		ContextWrapper();
@@ -17,7 +22,9 @@ class ContextWrapper
 		virtual void CreateContext(void);
 
 		// Override this one too	
-		cl::Program *LoadProgram(const std::string &filename);
+		virtual cl::Program *LoadProgram(const std::string &filename);
+
+		cl::Buffer *CreateBuffer(cl_mem_flags flags, size_t size, void *host_ptr, cl_int *err) const;
 
 		// Must not be called before CreateContext
 		const cl::Context &GetContext(void) const;
