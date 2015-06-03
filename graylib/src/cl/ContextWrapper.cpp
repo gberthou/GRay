@@ -18,7 +18,7 @@ ContextWrapper::~ContextWrapper()
 	delete context;
 }
 
-void ContextWrapper::CreateContext(void)
+cl_int ContextWrapper::CreateContext(void)
 {
 	const char *CHECK_MESSAGE = "Please check your drivers and hardware";
 	if(!created)
@@ -29,30 +29,37 @@ void ContextWrapper::CreateContext(void)
 		if(!platforms.size())
 		{
 			std::cerr << "ERROR: OpenCL cannot detect any platform." << std::endl << CHECK_MESSAGE << std::endl;
-			exit(0);
+			return -1;
 		}
 
 		// Takes the first platform
 		cl_context_properties cprops[3] = {CL_CONTEXT_PLATFORM, (cl_context_properties)(platforms[0])(), 0};
 		
 		context = new cl::Context(CL_DEVICE_TYPE_ALL, cprops, 0, 0, &err);
-		checkErr(err, "Context::Context");
+		if(!CheckErr(err, "Context::Context"))
+		{
+			delete context;
+			context = 0;
+			return err;
+		}
 
 		devices = context->getInfo<CL_CONTEXT_DEVICES>();
 
 		if(!devices.size())
 		{
 			std::cerr << "ERROR: OpenCL cannot detect any device in the selected platform." << std::endl << CHECK_MESSAGE << std::endl;
-			exit(0);
+			return -1;
 		}
 
 		created = true;
 	}
+
+	return CL_SUCCESS;
 }
 
 cl::Program *ContextWrapper::LoadProgram(const std::string &filename)
 {
-	if(created)
+	if(created && !programLoaded)
 	{
 		std::string src;
 		cl::Program *program;
@@ -60,7 +67,8 @@ cl::Program *ContextWrapper::LoadProgram(const std::string &filename)
 
 		// Open file
 		std::ifstream srcfile(filename.c_str());
-		checkErr(srcfile.is_open() ? CL_SUCCESS : -1, "Cannot open file cl/sample.cl");
+		if(!CheckErr(srcfile.is_open() ? CL_SUCCESS : -1, "Cannot open file cl/sample.cl"))
+			return 0;
 		
 		// Read file
 		src.append(std::istreambuf_iterator<char>(srcfile), std::istreambuf_iterator<char>());
@@ -69,7 +77,14 @@ cl::Program *ContextWrapper::LoadProgram(const std::string &filename)
 		cl::Program::Sources sources(1, std::make_pair(src.c_str(), src.size() + 1));
 		program = new cl::Program(*context, sources);
 		err = program->build(devices, "");
-		checkErr(err, "Program::build");
+		if(!CheckErr(err, "Program::build"))
+		{
+			delete program;
+			program = 0;
+		}
+
+		programLoaded = true;
+
 		return program;
 	}
 	return 0;

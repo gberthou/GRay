@@ -19,39 +19,47 @@ int main(void)
 
 	grl::ContextWrapper cwrapper;
 
-	cwrapper.CreateContext();
+	err = cwrapper.CreateContext();
+	if(!CheckErr(err, "ContextWrapper::CreateContext"))
+		return EXIT_FAILURE;
 
 	result = new char[CHAR_COUNT + 1];
 
 	cl::Buffer resultBuffer(cwrapper.GetContext(), CL_MEM_WRITE_ONLY | CL_MEM_USE_HOST_PTR, CHAR_COUNT + 1, result, &err);
-	checkErr(err, "Buffer::Buffer");
+	if(!CheckErr(err, "Buffer::Buffer"))
+		return EXIT_FAILURE;
 
 	program = cwrapper.LoadProgram("cl/sample.cl");
 
 	cl::Kernel kernel(*program, "hello", &err);
-	checkErr(err, "Kernel::Kernel");
+	if(!CheckErr(err, "Kernel::Kernel"))
+		return EXIT_FAILURE;
 
 	err = kernel.setArg(0, resultBuffer);
-	checkErr(err, "Kernel::setArg(0, ...)");
+	if(!CheckErr(err, "Kernel::setArg(0, ...)"))
+		return EXIT_FAILURE;
 
 	// Using program
 	cl::Event event;
 	cl::CommandQueue queue(cwrapper.GetContext(), cwrapper.GetDevices()[0], 0, &err);
-	checkErr(err, "CommandQueue::CommandQueue");
+	if(!CheckErr(err, "CommandQueue::CommandQueue"))
+		return EXIT_FAILURE;
 
 	err = queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(CHAR_COUNT + 1), cl::NDRange(1, 1), 0, &event);
-	checkErr(err, "CommandQueue::enqueueNDRangeKernel");
+	if(!CheckErr(err, "CommandQueue::enqueueNDRangeKernel"))
+		return EXIT_FAILURE;
 
 	event.wait();
 
 	err = queue.enqueueReadBuffer(resultBuffer, CL_TRUE, 0, CHAR_COUNT + 1, result);
-	checkErr(err, "CommandQueue::enqueueReadBuffer");
+	if(!CheckErr(err, "CommandQueue::enqueueReadBuffer"))
+		return EXIT_FAILURE;
 
 	std::cout << "Result: " << result << std::endl;
 
 	free(result);
 	delete program;
 
-	return 0;
+	return EXIT_SUCCESS;
 }
 

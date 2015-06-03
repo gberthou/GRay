@@ -35,7 +35,7 @@ class grl::Image
 		grl::Endianness endianness;
 		cl::Buffer *buffer;
 		unsigned int *data;
-	
+		bool built;	
 };
 
 #endif

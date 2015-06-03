@@ -19,7 +19,7 @@ class grl::ContextWrapper
 		virtual ~ContextWrapper();
 
 		// Override this in order to modify behavior
-		virtual void CreateContext(void);
+		virtual cl_int CreateContext(void);
 
 		// Override this one too	
 		virtual cl::Program *LoadProgram(const std::string &filename);
@@ -36,6 +36,7 @@ class grl::ContextWrapper
 
 		cl::Context *context;
 		bool created;
+		bool programLoaded;
 };
 
 #endif
