@@ -20,13 +20,15 @@ class grl::Image
 {
 
 	public:
-		Image(unsigned int width, unsigned int height, grl::Endianness endianness);
+		Image(ContextWrapper &cwrapper, unsigned int width, unsigned int height, grl::Endianness endianness);
 		virtual ~Image();
 
 		// You might want to override this
-		virtual cl_int BuildBuffer(const ContextWrapper &wrapper);
+		virtual cl_int BuildBuffer(void);
+		cl_int BindSimple(void);
 
 	protected:
+		ContextWrapper &cwrapper;
 		unsigned int width;
 		unsigned int height;
 		unsigned int depth;

@@ -2,7 +2,8 @@
 
 using namespace grl;
 
-Image::Image(unsigned int w, unsigned int h, Endianness endian):
+Image::Image(ContextWrapper &wrapper, unsigned int w, unsigned int h, Endianness endian):
+	cwrapper(wrapper),
 	width(w),
 	height(h),
 	depth(32), // TODO: Change this
@@ -17,25 +18,34 @@ Image::Image(unsigned int w, unsigned int h, Endianness endian):
 Image::~Image()
 {
 	delete buffer;
-	delete data;
+	delete [] data;
 }
 
-cl_int Image::BuildBuffer(const ContextWrapper &wrapper)
+cl_int Image::BuildBuffer(void)
 {
 	if(!built)
 	{
 		cl_int err;
-		buffer = wrapper.CreateBuffer(CL_MEM_WRITE_ONLY | CL_MEM_USE_HOST_PTR, size, data, &err);
-		if(err != CL_SUCCESS)
-			return err;
-
 		data = new unsigned int[size];
 		if(!data)
 			return -1;
+
+		buffer = cwrapper.CreateBuffer(CL_MEM_WRITE_ONLY | CL_MEM_USE_HOST_PTR, size, data, &err);
+		if(err != CL_SUCCESS)
+		{
+			delete [] data;
+			data = 0;
+			return err;
+		}
 
 		built = true;
 	}
 
 	return CL_SUCCESS;
+}
+
+cl_int Image::BindSimple(void)
+{
+	return cwrapper.BindBufferSimple(buffer);
 }
 

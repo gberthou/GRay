@@ -9,6 +9,8 @@ using namespace grl;
 
 ContextWrapper::ContextWrapper():
 	context(0),
+	program(0),
+	krSimple(0),
 	created(false)
 {
 }
@@ -16,6 +18,8 @@ ContextWrapper::ContextWrapper():
 ContextWrapper::~ContextWrapper()
 {
 	delete context;
+	delete program;
+	delete krSimple;
 }
 
 cl_int ContextWrapper::CreateContext(void)
@@ -48,6 +52,8 @@ cl_int ContextWrapper::CreateContext(void)
 		if(!devices.size())
 		{
 			std::cerr << "ERROR: OpenCL cannot detect any device in the selected platform." << std::endl << CHECK_MESSAGE << std::endl;
+			delete context;
+			context = 0;
 			return -1;
 		}
 
@@ -57,18 +63,21 @@ cl_int ContextWrapper::CreateContext(void)
 	return CL_SUCCESS;
 }
 
-cl::Program *ContextWrapper::LoadProgram(const std::string &filename)
+cl::Program *ContextWrapper::LoadProgram(cl_int *err)
 {
+	const std::string FILENAME = "cl/gray.cl"; // TODO: cl code should be embedded
+	
 	if(created && !programLoaded)
 	{
 		std::string src;
-		cl::Program *program;
-		cl_int err;
 
 		// Open file
-		std::ifstream srcfile(filename.c_str());
-		if(!CheckErr(srcfile.is_open() ? CL_SUCCESS : -1, "Cannot open file cl/sample.cl"))
+		std::ifstream srcfile(FILENAME.c_str());
+		if(!CheckErr(srcfile.is_open() ? CL_SUCCESS : -1, "Cannot open file cl/gray.cl"))
+		{
+			*err = -1;	
 			return 0;
+		}
 		
 		// Read file
 		src.append(std::istreambuf_iterator<char>(srcfile), std::istreambuf_iterator<char>());
@@ -76,15 +85,24 @@ cl::Program *ContextWrapper::LoadProgram(const std::string &filename)
 		// Build sources and program
 		cl::Program::Sources sources(1, std::make_pair(src.c_str(), src.size() + 1));
 		program = new cl::Program(*context, sources);
-		err = program->build(devices, "");
-		if(!CheckErr(err, "Program::build"))
+		*err = program->build(devices, "");
+		if(!CheckErr(*err, "Program::build"))
 		{
 			delete program;
 			program = 0;
 		}
 
-		programLoaded = true;
+		krSimple = new cl::Kernel(*program, "simple", err);
+		if(!CheckErr(*err, "Kernel::Kernel") || !krSimple)
+		{
+			delete program;
+			program = 0;
+			if(!krSimple)
+				*err = -1;
+			return 0;
+		}
 
+		programLoaded = true;
 		return program;
 	}
 	return 0;
@@ -92,7 +110,23 @@ cl::Program *ContextWrapper::LoadProgram(const std::string &filename)
 
 cl::Buffer *ContextWrapper::CreateBuffer(cl_mem_flags flags, size_t size, void *host_ptr, cl_int *err) const
 {
+	if(!context)
+	{
+		*err = -1;
+		return 0;
+	}
 	return new cl::Buffer(*context, flags, size, host_ptr, err);
+}
+
+cl_int ContextWrapper::BindBufferSimple(cl::Buffer *buffer)
+{
+	if(krSimple && !buffer)
+	{
+		cl_int err = krSimple->setArg(0, buffer);
+		CheckErr(err, "Kernel::setArg(0, ...)");
+		return err;
+	}
+	return -1;
 }
 
 const cl::Context &ContextWrapper::GetContext(void) const

@@ -7,38 +7,33 @@
 #include <string>
 
 #include "cl/ContextWrapper.h"
+#include "Image.h"
 #include "utils.h"
 
 int main(void)
 {
-	const unsigned int CHAR_COUNT = 16;
-	char *result;
-	cl::Program *program;
-
 	cl_int err;
 
 	grl::ContextWrapper cwrapper;
+	grl::Image image(cwrapper, 640, 480, grl::GRL_LITTLE_ENDIAN);
 
 	err = cwrapper.CreateContext();
 	if(!CheckErr(err, "ContextWrapper::CreateContext"))
 		return EXIT_FAILURE;
 
-	result = new char[CHAR_COUNT + 1];
-
-	cl::Buffer resultBuffer(cwrapper.GetContext(), CL_MEM_WRITE_ONLY | CL_MEM_USE_HOST_PTR, CHAR_COUNT + 1, result, &err);
-	if(!CheckErr(err, "Buffer::Buffer"))
+	cwrapper.LoadProgram(&err);
+	if(!CheckErr(err, "ContextWrapper::LoadProgram"))
+		return EXIT_FAILURE;
+	
+	err = image.BuildBuffer();
+	if(!CheckErr(err, "Image::BuildBuffer"))
 		return EXIT_FAILURE;
 
-	program = cwrapper.LoadProgram("cl/sample.cl");
-
-	cl::Kernel kernel(*program, "hello", &err);
-	if(!CheckErr(err, "Kernel::Kernel"))
+	err = image.BindSimple();
+	if(!CheckErr(err, "Image::BindSimple"))
 		return EXIT_FAILURE;
-
-	err = kernel.setArg(0, resultBuffer);
-	if(!CheckErr(err, "Kernel::setArg(0, ...)"))
-		return EXIT_FAILURE;
-
+	
+	/*
 	// Using program
 	cl::Event event;
 	cl::CommandQueue queue(cwrapper.GetContext(), cwrapper.GetDevices()[0], 0, &err);
@@ -56,9 +51,7 @@ int main(void)
 		return EXIT_FAILURE;
 
 	std::cout << "Result: " << result << std::endl;
-
-	free(result);
-	delete program;
+	*/
 
 	return EXIT_SUCCESS;
 }

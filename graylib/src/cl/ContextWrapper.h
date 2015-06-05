@@ -22,9 +22,10 @@ class grl::ContextWrapper
 		virtual cl_int CreateContext(void);
 
 		// Override this one too	
-		virtual cl::Program *LoadProgram(const std::string &filename);
+		virtual cl::Program *LoadProgram(cl_int *err);
 
 		cl::Buffer *CreateBuffer(cl_mem_flags flags, size_t size, void *host_ptr, cl_int *err) const;
+		cl_int BindBufferSimple(cl::Buffer *buffer);
 
 		// Must not be called before CreateContext
 		const cl::Context &GetContext(void) const;
@@ -35,6 +36,11 @@ class grl::ContextWrapper
 		cl::vector<cl::Device> devices;
 
 		cl::Context *context;
+		cl::Program *program;
+
+		// Kernels
+		cl::Kernel *krSimple;
+
 		bool created;
 		bool programLoaded;
 };
