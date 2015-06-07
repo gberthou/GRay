@@ -32,8 +32,7 @@ BINRELEASE=$(addprefix $(RELEASEDIR)/,$(BIN))
 
 FLAGSDEBUG=-g -pg
 FLAGSRELEASE=-O2
-
-LIBS=-lOpenCL
+LIBS=-lOpenCL -lSDL2main -lSDL2 -lGL
 
 $(DEBUG): $(OBJDEBUG)
 	$(GPP) -o $(BINDEBUG) $(OBJDEBUG) $(LIB) -lgray-d $(LIBS)

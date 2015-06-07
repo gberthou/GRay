@@ -2,6 +2,8 @@
 #include <cstdlib>
 #include <fstream>
 
+#include <GL/gl.h>
+
 #include "ContextWrapper.h"
 #include "utils.h"
 
@@ -22,7 +24,7 @@ ContextWrapper::~ContextWrapper()
 	delete krSimple;
 }
 
-cl_int ContextWrapper::CreateContext(void)
+cl_int ContextWrapper::CreateContext(void *glhRC, void *glhDC)
 {
 	const char *CHECK_MESSAGE = "Please check your drivers and hardware";
 	if(!created)
@@ -37,7 +39,10 @@ cl_int ContextWrapper::CreateContext(void)
 		}
 
 		// Takes the first platform
-		cl_context_properties cprops[3] = {CL_CONTEXT_PLATFORM, (cl_context_properties)(platforms[0])(), 0};
+		cl_context_properties cprops[7] = {CL_CONTEXT_PLATFORM, (cl_context_properties)(platforms[0])(),
+										   // OpenGL support 
+										   CL_GL_CONTEXT_KHR, (cl_context_properties)glhRC, 
+										   CL_WGL_HDC_KHR, (cl_context_properties)glhDC, 0};
 		
 		context = new cl::Context(CL_DEVICE_TYPE_ALL, cprops, 0, 0, &err);
 		if(!CheckErr(err, "Context::Context"))
@@ -118,15 +123,38 @@ cl::Buffer *ContextWrapper::CreateBuffer(cl_mem_flags flags, size_t size, void *
 	return new cl::Buffer(*context, flags, size, host_ptr, err);
 }
 
-cl_int ContextWrapper::BindBufferSimple(cl::Buffer *buffer)
+cl::Image2DGL *ContextWrapper::CreateImage2DGL(cl_mem_flags flags, GLenum target, GLint miplevel, GLuint texobj, cl_int *err) const
 {
-	if(krSimple && !buffer)
+	return new cl::Image2DGL(*context, flags, target, miplevel, texobj, err);
+}
+
+cl_int ContextWrapper::BindImageSimple(cl::Image2DGL *image)
+{
+	if(krSimple && image)
 	{
-		cl_int err = krSimple->setArg(0, buffer);
+		cl_int err = krSimple->setArg(0, *image);
 		CheckErr(err, "Kernel::setArg(0, ...)");
 		return err;
 	}
 	return -1;
+}
+
+cl::CommandQueue *ContextWrapper::CreateQueue(cl_command_queue_properties prop, cl_int *err) const
+{
+	if(!context || !created)
+	{
+		*err = -1;
+		std::cerr << "ContextWrapper::CreateQueue: The context must be created before trying to create a queue" << std::endl;	
+		return 0;
+	}
+	if(!devices.size())
+	{
+		*err = -1;
+		std::cerr << "ContextWrapper::CreateQueue: There must be at list one device" << std::endl;	
+		return 0;
+	}
+
+	return new cl::CommandQueue(*context, devices[0], prop, err);
 }
 
 const cl::Context &ContextWrapper::GetContext(void) const
@@ -137,5 +165,10 @@ const cl::Context &ContextWrapper::GetContext(void) const
 const cl::vector<cl::Device> &ContextWrapper::GetDevices(void) const
 {
 	return devices;
+}
+
+const cl::Kernel &ContextWrapper::GetKernelSimple(void) const
+{
+	return *krSimple;
 }
 
